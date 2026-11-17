@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Brawl Arena 3D - Real WebGL 3D Top-Down Shooter</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Local Three.js WebGL Engine (100% offline & APK-ready) -->
+  <script src="three.min.js"></script>
+</head>
+<body>
+  <!-- Three.js 3D WebGL Canvas Container -->
+  <div id="game-container"></div>
+
+  <!-- 2D Overlay Canvas for Joysticks and Touch Controls -->
+  <canvas id="joystick-canvas"></canvas>
+
+  <!-- LOBBY & SELECTION MENU SCREEN -->
+  <div id="lobby-screen" class="lobby-overlay">
+    <div class="lobby-modal">
+      <h1 class="game-logo">BRAWL ARENA 3D</h1>
+      <p class="game-subtitle">Original 3D Brawlers & 3v3 Gem Grab</p>
+
+      <!-- Section 1: Choose Brawler -->
+      <div class="menu-section">
+        <h2 class="section-title">CHOOSE ORIGINAL 3D BRAWLER</h2>
+        <div class="cards-grid" id="brawler-select-grid">
+          <!-- Shelly Card -->
+          <div class="select-card selected" data-brawler="shelly">
+            <div class="card-badge">SHOTGUNNER</div>
+            <div class="card-avatar avatar-shelly"></div>
+            <h3 class="card-name">SHELLY</h3>
+            <p class="card-desc">Purple hair & bandana. Shoots a wide 5-pellet shotgun blast.</p>
+            <div class="stat-row"><span>HP</span><div class="stat-bar"><div style="width: 70%; background: #22c55e;"></div></div></div>
+            <div class="stat-row"><span>DMG</span><div class="stat-bar"><div style="width: 75%; background: #ef4444;"></div></div></div>
+            <div class="stat-row"><span>SPD</span><div class="stat-bar"><div style="width: 65%; background: #3b82f6;"></div></div></div>
+          </div>
+
+          <!-- Colt Card -->
+          <div class="select-card" data-brawler="colt">
+            <div class="card-badge">GUNSLINGER</div>
+            <div class="card-avatar avatar-colt"></div>
+            <h3 class="card-name">COLT</h3>
+            <p class="card-desc">Red pompadour & sheriff vest. Rapid 6-bullet dual revolver stream.</p>
+            <div class="stat-row"><span>HP</span><div class="stat-bar"><div style="width: 55%; background: #22c55e;"></div></div></div>
+            <div class="stat-row"><span>DMG</span><div class="stat-bar"><div style="width: 90%; background: #ef4444;"></div></div></div>
+            <div class="stat-row"><span>SPD</span><div class="stat-bar"><div style="width: 80%; background: #3b82f6;"></div></div></div>
+          </div>
+
+          <!-- El Primo Card -->
+          <div class="select-card" data-brawler="el_primo">
+            <div class="card-badge">LUCHADOR TANK</div>
+            <div class="card-avatar avatar-primo"></div>
+            <h3 class="card-name">EL PRIMO</h3>
+            <p class="card-desc">Legendary masked wrestler. Flurry of heavy flying fists!</p>
+            <div class="stat-row"><span>HP</span><div class="stat-bar"><div style="width: 100%; background: #22c55e;"></div></div></div>
+            <div class="stat-row"><span>DMG</span><div class="stat-bar"><div style="width: 85%; background: #ef4444;"></div></div></div>
+            <div class="stat-row"><span>SPD</span><div class="stat-bar"><div style="width: 75%; background: #3b82f6;"></div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Choose 3D Arena Map -->
+      <div class="menu-section">
+        <h2 class="section-title">CHOOSE 3D ARENA MAP</h2>
+        <div class="cards-grid map-grid" id="map-select-grid">
+          <!-- Crystal Cavern -->
+          <div class="select-card selected" data-map="crystalCavern">
+            <div class="card-badge">BALANCED</div>
+            <h3 class="card-name">CRYSTAL CAVERN</h3>
+            <p class="card-desc">Classic 3D arena with central gem mine, cover barriers, and side bushes.</p>
+          </div>
+
+          <!-- Desert Dunes -->
+          <div class="select-card" data-map="desertDunes">
+            <div class="card-badge">OPEN SNIPER</div>
+            <h3 class="card-name">DESERT DUNES</h3>
+            <p class="card-desc">Open desert battlefield with 3D stone pillars and outer ambush lanes.</p>
+          </div>
+
+          <!-- Snake Prairie -->
+          <div class="select-card" data-map="snakePrairie">
+            <div class="card-badge">MASSIVE BUSH</div>
+            <h3 class="card-name">SNAKE PRAIRIE</h3>
+            <p class="card-desc">Dense 3D grass jungle everywhere. High-intensity stealth ambushes!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Play Button -->
+      <button id="btn-play" class="btn-brawl">BRAWL in 3D!</button>
+    </div>
+  </div>
+
+  <!-- IN-GAME HUD OVERLAY -->
+  <div id="ui-layer" style="display: none;">
+    <!-- Top Bar: Scores & Match Status -->
+    <header class="hud-header">
+      <!-- Blue Team (Player) Gem Count -->
+      <div class="team-score blue-score">
+        <span class="team-label">BLUE TEAM</span>
+        <span class="gem-icon">💎</span>
+        <span id="blue-gems" class="score-num">0</span>
+      </div>
+
+      <!-- Center Status / Countdown Timer -->
+      <div id="match-status" class="hud-match-status">3v3 GEM GRAB</div>
+
+      <!-- Red Team (Enemy) Gem Count -->
+      <div class="team-score red-score">
+        <span class="team-label">RED TEAM</span>
+        <span class="gem-icon">💎</span>
+        <span id="red-gems" class="score-num">0</span>
+      </div>
+
+      <!-- Menu Button -->
+      <button id="btn-return-menu" class="btn-menu">MENU</button>
+    </header>
+
+    <!-- Center Aim Toast (mobile) -->
+    <div id="aim-toast" class="hud-aim-toast">AIMING...</div>
+
+    <!-- Bottom HUD Bar -->
+    <div class="hud-bottom">
+      <!-- Player Info & Respawn Status -->
+      <div id="player-hud-card" class="hud-player-card">
+        <div class="brawler-name-badge" id="hud-brawler-name">SHELLY</div>
+        <div class="hp-bar-container">
+          <div id="player-hp-fill" class="hp-bar-fill"></div>
+          <span id="player-hp-text">3600 / 3600</span>
+        </div>
+      </div>
+
+      <!-- 3-Slot Ammo Container -->
+      <div class="hud-ammo-container">
+        <div class="ammo-slot active" id="ammo-1"><div class="ammo-fill"></div></div>
+        <div class="ammo-slot active" id="ammo-2"><div class="ammo-fill"></div></div>
+        <div class="ammo-slot active" id="ammo-3"><div class="ammo-fill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
