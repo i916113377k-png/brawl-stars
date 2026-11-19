@@ -5,143 +5,253 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>Brawl Arena 3D - Real WebGL 3D Top-Down Shooter</title>
+  <title>Brawl Arena 3D</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Local Three.js WebGL Engine (100% offline & APK-ready) -->
   <script src="three.min.js"></script>
 </head>
 <body>
-  <!-- Three.js 3D WebGL Canvas Container -->
-  <div id="game-container"></div>
 
-  <!-- 2D Overlay Canvas for Joysticks and Touch Controls -->
-  <canvas id="joystick-canvas"></canvas>
+<!-- ============================================================
+     LOBBY SCREEN — Brawl Stars Authentic Style
+     ============================================================ -->
+<div id="lobby-screen">
 
-  <!-- LOBBY & SELECTION MENU SCREEN -->
-  <div id="lobby-screen" class="lobby-overlay">
-    <div class="lobby-modal">
-      <h1 class="game-logo">BRAWL ARENA 3D</h1>
-      <p class="game-subtitle">Original 3D Brawlers & 3v3 Gem Grab</p>
-
-      <!-- Section 1: Choose Brawler -->
-      <div class="menu-section">
-        <h2 class="section-title">CHOOSE ORIGINAL 3D BRAWLER</h2>
-        <div class="cards-grid" id="brawler-select-grid">
-          <!-- Shelly Card -->
-          <div class="select-card selected" data-brawler="shelly">
-            <div class="card-badge">SHOTGUNNER</div>
-            <div class="card-avatar avatar-shelly"></div>
-            <h3 class="card-name">SHELLY</h3>
-            <p class="card-desc">Purple hair & bandana. Shoots a wide 5-pellet shotgun blast.</p>
-            <div class="stat-row"><span>HP</span><div class="stat-bar"><div style="width: 70%; background: #22c55e;"></div></div></div>
-            <div class="stat-row"><span>DMG</span><div class="stat-bar"><div style="width: 75%; background: #ef4444;"></div></div></div>
-            <div class="stat-row"><span>SPD</span><div class="stat-bar"><div style="width: 65%; background: #3b82f6;"></div></div></div>
-          </div>
-
-          <!-- Colt Card -->
-          <div class="select-card" data-brawler="colt">
-            <div class="card-badge">GUNSLINGER</div>
-            <div class="card-avatar avatar-colt"></div>
-            <h3 class="card-name">COLT</h3>
-            <p class="card-desc">Red pompadour & sheriff vest. Rapid 6-bullet dual revolver stream.</p>
-            <div class="stat-row"><span>HP</span><div class="stat-bar"><div style="width: 55%; background: #22c55e;"></div></div></div>
-            <div class="stat-row"><span>DMG</span><div class="stat-bar"><div style="width: 90%; background: #ef4444;"></div></div></div>
-            <div class="stat-row"><span>SPD</span><div class="stat-bar"><div style="width: 80%; background: #3b82f6;"></div></div></div>
-          </div>
-
-          <!-- El Primo Card -->
-          <div class="select-card" data-brawler="el_primo">
-            <div class="card-badge">LUCHADOR TANK</div>
-            <div class="card-avatar avatar-primo"></div>
-            <h3 class="card-name">EL PRIMO</h3>
-            <p class="card-desc">Legendary masked wrestler. Flurry of heavy flying fists!</p>
-            <div class="stat-row"><span>HP</span><div class="stat-bar"><div style="width: 100%; background: #22c55e;"></div></div></div>
-            <div class="stat-row"><span>DMG</span><div class="stat-bar"><div style="width: 85%; background: #ef4444;"></div></div></div>
-            <div class="stat-row"><span>SPD</span><div class="stat-bar"><div style="width: 75%; background: #3b82f6;"></div></div></div>
-          </div>
+  <!-- TOP HEADER BAR (Currency & Profile) -->
+  <div class="lobby-topbar">
+    <div class="topbar-left">
+      <div class="profile-badge">
+        <div class="profile-avatar">🏆</div>
+        <div class="profile-info">
+          <span class="profile-name">PLAYER</span>
+          <span class="profile-cups">⭐ 1117</span>
         </div>
       </div>
-
-      <!-- Section 2: Choose 3D Arena Map -->
-      <div class="menu-section">
-        <h2 class="section-title">CHOOSE 3D ARENA MAP</h2>
-        <div class="cards-grid map-grid" id="map-select-grid">
-          <!-- Crystal Cavern -->
-          <div class="select-card selected" data-map="crystalCavern">
-            <div class="card-badge">BALANCED</div>
-            <h3 class="card-name">CRYSTAL CAVERN</h3>
-            <p class="card-desc">Classic 3D arena with central gem mine, cover barriers, and side bushes.</p>
-          </div>
-
-          <!-- Desert Dunes -->
-          <div class="select-card" data-map="desertDunes">
-            <div class="card-badge">OPEN SNIPER</div>
-            <h3 class="card-name">DESERT DUNES</h3>
-            <p class="card-desc">Open desert battlefield with 3D stone pillars and outer ambush lanes.</p>
-          </div>
-
-          <!-- Snake Prairie -->
-          <div class="select-card" data-map="snakePrairie">
-            <div class="card-badge">MASSIVE BUSH</div>
-            <h3 class="card-name">SNAKE PRAIRIE</h3>
-            <p class="card-desc">Dense 3D grass jungle everywhere. High-intensity stealth ambushes!</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Play Button -->
-      <button id="btn-play" class="btn-brawl">BRAWL in 3D!</button>
     </div>
-  </div>
-
-  <!-- IN-GAME HUD OVERLAY -->
-  <div id="ui-layer" style="display: none;">
-    <!-- Top Bar: Scores & Match Status -->
-    <header class="hud-header">
-      <!-- Blue Team (Player) Gem Count -->
-      <div class="team-score blue-score">
-        <span class="team-label">BLUE TEAM</span>
-        <span class="gem-icon">💎</span>
-        <span id="blue-gems" class="score-num">0</span>
+    <div class="topbar-right">
+      <div class="currency-pill gold-pill">
+        <span class="currency-icon">🪙</span>
+        <span class="currency-val" id="coins-val">231</span>
       </div>
-
-      <!-- Center Status / Countdown Timer -->
-      <div id="match-status" class="hud-match-status">3v3 GEM GRAB</div>
-
-      <!-- Red Team (Enemy) Gem Count -->
-      <div class="team-score red-score">
-        <span class="team-label">RED TEAM</span>
-        <span class="gem-icon">💎</span>
-        <span id="red-gems" class="score-num">0</span>
+      <div class="currency-pill gem-pill">
+        <span class="currency-icon">💎</span>
+        <span class="currency-val">44</span>
       </div>
-
-      <!-- Menu Button -->
-      <button id="btn-return-menu" class="btn-menu">MENU</button>
-    </header>
-
-    <!-- Center Aim Toast (mobile) -->
-    <div id="aim-toast" class="hud-aim-toast">AIMING...</div>
-
-    <!-- Bottom HUD Bar -->
-    <div class="hud-bottom">
-      <!-- Player Info & Respawn Status -->
-      <div id="player-hud-card" class="hud-player-card">
-        <div class="brawler-name-badge" id="hud-brawler-name">SHELLY</div>
-        <div class="hp-bar-container">
-          <div id="player-hp-fill" class="hp-bar-fill"></div>
-          <span id="player-hp-text">3600 / 3600</span>
-        </div>
-      </div>
-
-      <!-- 3-Slot Ammo Container -->
-      <div class="hud-ammo-container">
-        <div class="ammo-slot active" id="ammo-1"><div class="ammo-fill"></div></div>
-        <div class="ammo-slot active" id="ammo-2"><div class="ammo-fill"></div></div>
-        <div class="ammo-slot active" id="ammo-3"><div class="ammo-fill"></div></div>
+      <div class="currency-pill trophy-pill">
+        <span class="currency-icon">🏆</span>
+        <span class="currency-val">54</span>
       </div>
     </div>
   </div>
 
-  <script src="game.js"></script>
+  <!-- MAIN LOBBY LAYOUT -->
+  <div class="lobby-main">
+
+    <!-- LEFT SIDE NAV -->
+    <nav class="lobby-nav">
+      <div class="nav-btn nav-active">
+        <span class="nav-icon">🏪</span>
+        <span class="nav-label">SHOP</span>
+      </div>
+      <div class="nav-btn" id="nav-brawlers" onclick="openBrawlerSelect()">
+        <span class="nav-icon">👊</span>
+        <span class="nav-label">BRAWLERS</span>
+        <span class="nav-badge">3</span>
+      </div>
+      <div class="nav-btn">
+        <span class="nav-icon">🌐</span>
+        <span class="nav-label">SOCIAL</span>
+      </div>
+      <div class="nav-btn">
+        <span class="nav-icon">ℹ️</span>
+        <span class="nav-label">INFO</span>
+      </div>
+    </nav>
+
+    <!-- CENTER STAGE — Active Brawler Showcase -->
+    <div class="lobby-stage">
+
+      <!-- Brawler Name Tag -->
+      <div class="stage-name-tag">
+        <span class="stage-trophy">🏆</span>
+        <span class="stage-brawler-name" id="stage-brawler-name">SHELLY</span>
+        <span class="stage-cups-count" id="stage-cups">126</span>
+        <span class="stage-powerup" id="stage-power">POWER 7</span>
+      </div>
+
+      <!-- 3D Canvas Brawler Preview -->
+      <canvas id="preview-canvas"></canvas>
+
+      <!-- Floating Level Badge -->
+      <div class="stage-level-badge">
+        <span class="level-num" id="stage-level">7</span>
+      </div>
+
+      <!-- Left / Right Arrow Swiper -->
+      <button class="stage-arrow left-arrow" onclick="prevBrawler()">‹</button>
+      <button class="stage-arrow right-arrow" onclick="nextBrawler()">›</button>
+
+      <!-- Stage floor glow -->
+      <div class="stage-glow"></div>
+    </div>
+
+    <!-- RIGHT SIDE PANEL: Brawler Stats & Upgrades -->
+    <div class="lobby-right">
+      <div class="brawler-stats-panel">
+        <div class="stat-line">
+          <span class="stat-label">❤️ HP</span>
+          <div class="stat-bar-wrap"><div class="stat-fill hp-fill" id="stat-hp"></div></div>
+        </div>
+        <div class="stat-line">
+          <span class="stat-label">💥 DAMAGE</span>
+          <div class="stat-bar-wrap"><div class="stat-fill dmg-fill" id="stat-dmg"></div></div>
+        </div>
+        <div class="stat-line">
+          <span class="stat-label">👟 SPEED</span>
+          <div class="stat-bar-wrap"><div class="stat-fill spd-fill" id="stat-spd"></div></div>
+        </div>
+        <div class="stat-line">
+          <span class="stat-label">🔫 RANGE</span>
+          <div class="stat-bar-wrap"><div class="stat-fill rng-fill" id="stat-rng"></div></div>
+        </div>
+      </div>
+
+      <!-- Brawler Role Tag -->
+      <div class="role-tag" id="role-tag">SPREAD SHOTGUNNER</div>
+
+      <!-- Upgrade & Select Buttons -->
+      <button class="btn-upgrade">
+        <span>⬆️ UPGRADE</span>
+        <span class="upgrade-cost">🪙 150</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- BOTTOM SECTION — Game Mode & Play Button -->
+  <div class="lobby-bottom">
+
+    <!-- Left: event / map info -->
+    <div class="bottom-event-info" onclick="openMapSelect()">
+      <div class="event-mode-icon">💎</div>
+      <div class="event-text">
+        <div class="event-mode-name">RAZZIA DI GEMME</div>
+        <div class="event-map-name" id="event-map-name">Crystal Cavern · Divisione cellulare</div>
+      </div>
+      <div class="event-new-badge">NUOVO</div>
+    </div>
+
+    <!-- Map Selector Dots -->
+    <div class="map-dots">
+      <div class="map-dot active" onclick="selectMapDot(0, 'crystalCavern')"></div>
+      <div class="map-dot" onclick="selectMapDot(1, 'desertDunes')"></div>
+      <div class="map-dot" onclick="selectMapDot(2, 'snakePrairie')"></div>
+    </div>
+
+    <!-- Right: BRAWL! Play Button -->
+    <button id="btn-play" class="btn-brawl">
+      <div class="btn-brawl-inner">
+        <span class="btn-brawl-ready">PRÊT</span>
+        <span class="btn-brawl-sub">TAP TO BRAWL!</span>
+      </div>
+    </button>
+
+  </div>
+
+</div>
+
+<!-- ============================================================
+     BRAWLER SELECT DRAWER (slides up from bottom)
+     ============================================================ -->
+<div id="brawler-drawer" class="brawler-drawer hidden">
+  <div class="drawer-header">
+    <span class="drawer-title">SELECT BRAWLER</span>
+    <button class="drawer-close" onclick="closeBrawlerSelect()">✕</button>
+  </div>
+  <div class="drawer-grid">
+    <div class="drawer-card selected" data-brawler="shelly" onclick="pickBrawler('shelly', this)">
+      <div class="dc-avatar av-shelly"></div>
+      <div class="dc-name">SHELLY</div>
+      <div class="dc-role">SHOTGUNNER</div>
+    </div>
+    <div class="drawer-card" data-brawler="colt" onclick="pickBrawler('colt', this)">
+      <div class="dc-avatar av-colt"></div>
+      <div class="dc-name">COLT</div>
+      <div class="dc-role">GUNSLINGER</div>
+    </div>
+    <div class="drawer-card" data-brawler="el_primo" onclick="pickBrawler('el_primo', this)">
+      <div class="dc-avatar av-primo"></div>
+      <div class="dc-name">EL PRIMO</div>
+      <div class="dc-role">LUCHADOR</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAP SELECT DRAWER -->
+<div id="map-drawer" class="brawler-drawer hidden">
+  <div class="drawer-header">
+    <span class="drawer-title">SELECT MAP</span>
+    <button class="drawer-close" onclick="closeMapSelect()">✕</button>
+  </div>
+  <div class="drawer-grid">
+    <div class="drawer-card map-dcard selected" data-map="crystalCavern" onclick="pickMap('crystalCavern','Crystal Cavern','Crystal Cavern · Divisione cellulare', this)">
+      <div class="dc-map-icon">⛏️</div>
+      <div class="dc-name">CRYSTAL CAVERN</div>
+      <div class="dc-role">BALANCED</div>
+    </div>
+    <div class="drawer-card map-dcard" data-map="desertDunes" onclick="pickMap('desertDunes','Desert Dunes','Desert Dunes · Open Field', this)">
+      <div class="dc-map-icon">🏜️</div>
+      <div class="dc-name">DESERT DUNES</div>
+      <div class="dc-role">OPEN SNIPER</div>
+    </div>
+    <div class="drawer-card map-dcard" data-map="snakePrairie" onclick="pickMap('snakePrairie','Snake Prairie','Snake Prairie · Dense Bush', this)">
+      <div class="dc-map-icon">🌿</div>
+      <div class="dc-name">SNAKE PRAIRIE</div>
+      <div class="dc-role">MASSIVE BUSH</div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer backdrop -->
+<div id="drawer-backdrop" class="drawer-backdrop hidden" onclick="closeAll()"></div>
+
+<!-- ============================================================
+     IN-GAME HUD OVERLAY
+     ============================================================ -->
+<div id="ui-layer" style="display: none;">
+  <header class="hud-header">
+    <div class="team-score blue-score">
+      <span class="team-label">BLUE</span>
+      <span class="gem-icon">💎</span>
+      <span id="blue-gems" class="score-num">0</span>
+    </div>
+    <div id="match-status" class="hud-match-status">3v3 GEM GRAB</div>
+    <div class="team-score red-score">
+      <span class="team-label">RED</span>
+      <span class="gem-icon">💎</span>
+      <span id="red-gems" class="score-num">0</span>
+    </div>
+    <button id="btn-return-menu" class="btn-menu">MENU</button>
+  </header>
+  <div id="aim-toast" class="hud-aim-toast">AIMING...</div>
+  <div class="hud-bottom">
+    <div id="player-hud-card" class="hud-player-card">
+      <div class="brawler-name-badge" id="hud-brawler-name">SHELLY</div>
+      <div class="hp-bar-container">
+        <div id="player-hp-fill" class="hp-bar-fill"></div>
+        <span id="player-hp-text">3600 / 3600</span>
+      </div>
+    </div>
+    <div class="hud-ammo-container">
+      <div class="ammo-slot" id="ammo-1"><div class="ammo-fill"></div></div>
+      <div class="ammo-slot" id="ammo-2"><div class="ammo-fill"></div></div>
+      <div class="ammo-slot" id="ammo-3"><div class="ammo-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Three.js Game Canvas Container -->
+<div id="game-container"></div>
+<canvas id="joystick-canvas"></canvas>
+
+<script src="game.js"></script>
 </body>
 </html>
