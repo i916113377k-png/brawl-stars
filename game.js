@@ -16,14 +16,14 @@ const BRAWLERS_3D = {
     name: 'SHELLY',
     role: 'Shotgunner',
     maxHp: 3600,
-    speed: 12.0,
+    speed: 7.5,          // ← Slower (was 12.0)
     bulletRange: 14.0,
-    bulletSpeed: 38.0,
+    bulletSpeed: 32.0,
     bulletDamage: 300,
     pellets: 5,
     spreadAngle: 0.38,
     radius: 0.9,
-    hairColor: 0x9333ea, // Signature Purple
+    hairColor: 0x9333ea,
     skinColor: 0xfed7aa,
     shirtColor: 0x2563eb,
     weaponType: 'shotgun'
@@ -32,16 +32,16 @@ const BRAWLERS_3D = {
     name: 'COLT',
     role: 'Gunslinger',
     maxHp: 2800,
-    speed: 13.0,
+    speed: 8.5,          // ← Slower (was 13.0)
     bulletRange: 18.0,
-    bulletSpeed: 45.0,
+    bulletSpeed: 38.0,
     bulletDamage: 340,
     pellets: 1,
     burstCount: 4,
     burstDelay: 0.08,
     spreadAngle: 0.04,
     radius: 0.85,
-    hairColor: 0xdc2626, // Red Pompadour
+    hairColor: 0xdc2626,
     skinColor: 0xfed7aa,
     shirtColor: 0x1e3a8a,
     weaponType: 'dual_pistols'
@@ -50,16 +50,16 @@ const BRAWLERS_3D = {
     name: 'EL PRIMO',
     role: 'Luchador Tank',
     maxHp: 5600,
-    speed: 12.5,
+    speed: 7.0,          // ← Slower (was 12.5)
     bulletRange: 9.0,
-    bulletSpeed: 32.0,
+    bulletSpeed: 26.0,
     bulletDamage: 420,
     pellets: 4,
     spreadAngle: 0.42,
     radius: 1.1,
-    maskColor: 0x2563eb, // Blue Luchador Mask
-    skinColor: 0xe09f67, // Tan muscular skin
-    trimsColor: 0xfacc15, // Gold accents
+    maskColor: 0x2563eb,
+    skinColor: 0xe09f67,
+    trimsColor: 0xfacc15,
     weaponType: 'flying_fists'
   }
 };
@@ -139,8 +139,15 @@ const GAME_CONFIG = {
   MAX_AMMO: 3,
   AMMO_RELOAD_TIME: 1.25,
   RESPAWN_TIME: 4.0,
-  GEM_SPAWN_INTERVAL: 6.0
+  GEM_SPAWN_INTERVAL: 6.0,
+  GEMS_TO_WIN: 10,
+  TROPHIES_WIN: 8,    // Cups earned on victory
+  TROPHIES_LOSE: -4   // Cups lost on defeat
 };
+
+// Trophy / Cup persistent storage (localStorage)
+const TROPHY_KEY = 'brawl_arena_trophies';
+let playerTrophies = parseInt(localStorage.getItem(TROPHY_KEY) || '1117', 10);
 
 // =============================================================================
 // 2. THREE.JS 3D SCENE SETUP
@@ -381,6 +388,7 @@ class Brawler3D {
     this.ammo = GAME_CONFIG.MAX_AMMO;
     this.reloadTimer = 0;
     this.gems = 0;
+    this.kills = 0;
     this.inBush = false;
     this.isDead = false;
     this.respawnTimer = 0;
@@ -670,7 +678,13 @@ class Projectile3D {
     const targets = this.team === 'blue' ? redTeam3D : blueTeam3D;
     for (const b of targets) {
       if (!b.isDead && Math.hypot(this.x - b.x, this.z - b.z) < b.radius + 0.3) {
+        const wasAlive = !b.isDead;
         b.takeDamage(this.damage);
+        // Award kill credit to the shooter's team leader
+        if (wasAlive && b.isDead) {
+          const shooterTeam = this.team === 'blue' ? blueTeam3D : redTeam3D;
+          if (shooterTeam[0]) shooterTeam[0].kills = (shooterTeam[0].kills || 0) + 1;
+        }
         this.destroy();
         return;
       }
@@ -1072,8 +1086,6 @@ function isCircleOverlappingRect3D(circle, rect) {
 // =============================================================================
 const lobbyScreen = document.getElementById('lobby-screen');
 const uiLayer = document.getElementById('ui-layer');
-const btnPlay = document.getElementById('btn-play');
-const btnReturnMenu = document.getElementById('btn-return-menu');
 
 const blueGemsEl = document.getElementById('blue-gems');
 const redGemsEl = document.getElementById('red-gems');
@@ -1109,20 +1121,30 @@ document.querySelectorAll('#map-select-grid .select-card').forEach(card => {
   });
 });
 
+const btnPlay = document.getElementById('btn-play');
+const btnReturnMenu = document.getElementById('btn-return-menu');
 btnPlay.addEventListener('click', () => { startMatch(); });
 btnReturnMenu.addEventListener('click', () => { returnToLobby(); });
 
 function returnToLobby() {
   isGameRunning = false;
-  lobbyScreen.style.display = 'flex';
-  uiLayer.style.display = 'none';
+  document.getElementById('lobby-screen').style.display = 'flex';
+  document.getElementById('game-container').style.display = 'none';
+  document.getElementById('joystick-canvas').style.display = 'none';
+  document.getElementById('ui-layer').style.display = 'none';
+  // Resume preview animation
+  if (!previewAnimFrame) animatePreview();
 }
 
 function startMatch() {
   init3DMatch(selectedBrawlerKey, selectedMapKey);
-  lobbyScreen.style.display = 'none';
-  uiLayer.style.display = 'flex';
+  document.getElementById('lobby-screen').style.display = 'none';
+  document.getElementById('game-container').style.display = 'block';
+  document.getElementById('joystick-canvas').style.display = 'block';
+  document.getElementById('ui-layer').style.display = 'flex';
   isGameRunning = true;
+  // Stop preview loop (save GPU)
+  if (previewAnimFrame) { cancelAnimationFrame(previewAnimFrame); previewAnimFrame = null; }
 }
 
 function init3DMatch(brawlerKey, mapKey) {
@@ -1168,18 +1190,43 @@ function init3DMatch(brawlerKey, mapKey) {
   redTeam3D[2].x = 4.5; redTeam3D[2].z = -19; redTeam3D[2].spawnX = 4.5; redTeam3D[2].spawnZ = -19;
 
   hudBrawlerName.textContent = BRAWLERS_3D[brawlerKey].name;
+  matchEndTriggered = false;
   updateGemScoreHUD();
 }
 
 function updateGemScoreHUD() {
+  if (!blueTeam3D.length || !redTeam3D.length) return;
   const blueTotal = blueTeam3D.reduce((s, b) => s + b.gems, 0);
-  const redTotal = redTeam3D.reduce((s, b) => s + b.gems, 0);
+  const redTotal  = redTeam3D.reduce((s, b) => s + b.gems, 0);
   blueGemsEl.textContent = blueTotal;
-  redGemsEl.textContent = redTotal;
+  redGemsEl.textContent  = redTotal;
 
-  if (blueTotal >= 10) matchStatusEl.textContent = 'BLUE TEAM WINNING! (10 GEMS)';
-  else if (redTotal >= 10) matchStatusEl.textContent = 'RED TEAM WINNING! (10 GEMS)';
-  else matchStatusEl.textContent = '3v3 GEM GRAB';
+  if (blueTotal >= GAME_CONFIG.GEMS_TO_WIN) {
+    matchStatusEl.textContent = '🏆 BLUE TEAM WINNING!';
+    triggerMatchEnd('win');
+  } else if (redTotal >= GAME_CONFIG.GEMS_TO_WIN) {
+    matchStatusEl.textContent = '💀 RED TEAM WINNING!';
+    triggerMatchEnd('lose');
+  } else {
+    matchStatusEl.textContent = '3v3 GEM GRAB';
+  }
+}
+
+// Match-end lock (call only once)
+let matchEndTriggered = false;
+
+function triggerMatchEnd(result) {
+  if (matchEndTriggered) return;
+  matchEndTriggered = true;
+  isGameRunning = false;
+
+  // Trophies calculation
+  const change = result === 'win' ? GAME_CONFIG.TROPHIES_WIN : GAME_CONFIG.TROPHIES_LOSE;
+  playerTrophies = Math.max(0, playerTrophies + change);
+  localStorage.setItem(TROPHY_KEY, playerTrophies);
+
+  // Show result screen after 1.5s delay (let last action settle)
+  setTimeout(() => showResultScreen(result, change), 1500);
 }
 
 // =============================================================================
@@ -1190,8 +1237,398 @@ const raycaster = new THREE.Raycaster();
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const mouse3D = new THREE.Vector3();
 
+// =============================================================================
+// RESULT SCREEN — Win/Lose overlay with trophy change
+// =============================================================================
+function showResultScreen(result, trophyChange) {
+  const isWin = result === 'win';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'result-overlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 300;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: ${isWin
+      ? 'radial-gradient(circle at center, rgba(21,128,61,0.97), rgba(5,46,22,0.98))'
+      : 'radial-gradient(circle at center, rgba(127,29,29,0.97), rgba(69,10,10,0.98))'};
+    animation: fadeInOverlay 0.5s ease;
+    font-family: "Segoe UI", Arial, sans-serif;
+  `;
+
+  // Animated particles
+  const particleCount = 18;
+  for (let i = 0; i < particleCount; i++) {
+    const p = document.createElement('div');
+    const size = 8 + Math.random() * 14;
+    const startX = Math.random() * 100;
+    const delay = Math.random() * 2.5;
+    const dur = 2 + Math.random() * 2;
+    p.style.cssText = `
+      position: absolute;
+      left: ${startX}%; top: 110%;
+      width: ${size}px; height: ${size}px;
+      border-radius: 50%;
+      background: ${isWin ? '#facc15' : '#ef4444'};
+      opacity: 0.7;
+      animation: floatUp ${dur}s ${delay}s ease-in infinite;
+    `;
+    overlay.appendChild(p);
+  }
+
+  overlay.innerHTML += `
+    <style>
+      @keyframes fadeInOverlay { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+      @keyframes floatUp { from { transform:translateY(0) scale(1); opacity:0.7; } to { transform:translateY(-130vh) scale(0.5); opacity:0; } }
+      @keyframes popIn   { from { transform:scale(0.6); opacity:0; } to { transform:scale(1); opacity:1; } }
+      @keyframes trophyPop { 0%{transform:scale(0.5) rotate(-10deg);opacity:0} 60%{transform:scale(1.15) rotate(4deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:1} }
+      @keyframes counterUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+      #result-box { animation: popIn 0.4s cubic-bezier(0.4,0,0.2,1) 0.2s both; }
+      .result-btn:active { transform: translateY(3px); }
+    </style>
+
+    <div id="result-box" style="
+      background: rgba(0,0,0,0.5);
+      border: 3px solid ${isWin ? '#22c55e' : '#ef4444'};
+      border-radius: 28px;
+      padding: 32px 40px 28px;
+      display: flex; flex-direction: column; align-items: center; gap: 18px;
+      max-width: 360px; width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15);
+    ">
+      <!-- Result Title -->
+      <div style="font-size: 48px; line-height: 1;">${isWin ? '🏆' : '💀'}</div>
+      <div style="
+        font-size: 32px; font-weight: 900; letter-spacing: 3px;
+        color: ${isWin ? '#4ade80' : '#f87171'};
+        text-shadow: 0 2px 10px ${isWin ? 'rgba(74,222,128,0.5)' : 'rgba(248,113,113,0.5)'};
+      ">${isWin ? 'VICTORY!' : 'DEFEAT!'}</div>
+
+      <!-- Match Stats -->
+      <div style="
+        background: rgba(0,0,0,0.3); border-radius: 16px;
+        padding: 14px 20px; width: 100%;
+        display: flex; flex-direction: column; gap: 8px;
+      ">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#94a3b8; font-size:13px; font-weight:700;">💎 GEMS COLLECTED</span>
+          <span style="color:#c084fc; font-size:16px; font-weight:900;" id="res-gems">0</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#94a3b8; font-size:13px; font-weight:700;">💥 ELIMINATIONS</span>
+          <span style="color:#fb923c; font-size:16px; font-weight:900;" id="res-kills">0</span>
+        </div>
+      </div>
+
+      <!-- Trophy Change -->
+      <div style="
+        display: flex; flex-direction: column; align-items: center; gap: 6px;
+        animation: trophyPop 0.6s 0.5s cubic-bezier(0.4,0,0.2,1) both;
+      ">
+        <div style="color:#94a3b8; font-size:12px; font-weight:700; letter-spacing:1px;">TROPHIES</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="color:#fde68a; font-size:28px; font-weight:900;">⭐ ${playerTrophies - trophyChange}</span>
+          <span style="
+            color: ${trophyChange > 0 ? '#4ade80' : '#f87171'};
+            font-size: 22px; font-weight: 900;
+            background: rgba(0,0,0,0.3); border-radius:10px; padding: 3px 10px;
+            animation: counterUp 0.4s 0.9s both;
+          ">${trophyChange > 0 ? '+' : ''}${trophyChange}</span>
+          <span style="color:#facc15; font-size:28px; font-weight:900;">⭐ ${playerTrophies}</span>
+        </div>
+        <!-- Trophy progress bar -->
+        <div style="width:200px; height:10px; background:rgba(0,0,0,0.4); border-radius:5px; overflow:hidden; margin-top:4px;">
+          <div style="
+            height:100%; background: linear-gradient(90deg, #facc15, #f59e0b);
+            border-radius:5px;
+            width:${Math.min(100, (playerTrophies % 100))}%;
+            transition: width 0.8s ease 1s;
+          "></div>
+        </div>
+        <div style="color:#fde68a; font-size:11px; font-weight:700;">${playerTrophies} / ${Math.ceil(playerTrophies / 100) * 100} next league</div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex; gap:12px; width:100%; margin-top:4px;">
+        <button onclick="restartMatch()" class="result-btn" style="
+          flex: 1;
+          background: linear-gradient(180deg, #facc15, #ca8a04);
+          color: #422006; font-size: 15px; font-weight: 900; letter-spacing: 1px;
+          border: none; border-radius: 16px; padding: 13px 10px;
+          box-shadow: 0 6px 0 #854d0e; cursor: pointer;
+          transition: all 0.15s;
+        ">🔄 PLAY AGAIN</button>
+        <button onclick="exitToMenu()" class="result-btn" style="
+          flex: 1;
+          background: linear-gradient(180deg, #475569, #1e293b);
+          color: #ffffff; font-size: 15px; font-weight: 900; letter-spacing: 1px;
+          border: 2px solid #334155; border-radius: 16px; padding: 13px 10px;
+          box-shadow: 0 6px 0 #0f172a; cursor: pointer;
+          transition: all 0.15s;
+        ">🏠 MENU</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Populate stats after mount
+  setTimeout(() => {
+    const playerGems = blueTeam3D.length ? blueTeam3D[0].gems : 0;
+    const resGemsEl = document.getElementById('res-gems');
+    if (resGemsEl) resGemsEl.textContent = blueTeam3D.reduce((s, b) => s + b.gems, 0);
+    const resKillsEl = document.getElementById('res-kills');
+    if (resKillsEl) resKillsEl.textContent = blueTeam3D[0] ? (blueTeam3D[0].kills || 0) : 0;
+  }, 100);
+
+  // Update lobby trophies counter
+  updateLobbyTrophies();
+}
+
+function removeResultScreen() {
+  const overlay = document.getElementById('result-overlay');
+  if (overlay) overlay.remove();
+}
+
+function restartMatch() {
+  removeResultScreen();
+  startMatch();
+}
+
+function exitToMenu() {
+  removeResultScreen();
+  returnToLobby();
+}
+
+function updateLobbyTrophies() {
+  const el = document.querySelector('.profile-cups');
+  if (el) el.textContent = `⭐ ${playerTrophies}`;
+  const coinsVal = document.getElementById('coins-val');
+  if (coinsVal) {
+    // Award some gold too
+    const currentCoins = parseInt(coinsVal.textContent || '231', 10);
+    const coinReward = matchEndTriggered ? (blueTeam3D.reduce((s, b) => s + b.gems, 0) * 5) : 0;
+    coinsVal.textContent = currentCoins + coinReward;
+  }
+}
+
+// =============================================================================
+// LOBBY MENU LOGIC — 3D Preview Canvas + Brawler/Map Selection
+// =============================================================================
+
+const BRAWLER_KEYS = ['shelly', 'colt', 'el_primo'];
+let currentBrawlerIdx = 0;
+
+// Lobby stats data for each brawler
+const LOBBY_STATS = {
+  shelly:   { hp: 70, dmg: 75, spd: 65, rng: 55, role: 'SPREAD SHOTGUNNER', cups: 126, power: 7 },
+  colt:     { hp: 55, dmg: 90, spd: 80, rng: 90, role: 'RAPID GUNSLINGER',  cups: 84,  power: 5 },
+  el_primo: { hp: 100, dmg: 85, spd: 75, rng: 30, role: 'LUCHADOR TANK',    cups: 203, power: 9 }
+};
+
+// --- Lobby 3D Preview Scene ---
+let previewScene, previewCamera, previewRenderer, previewBrawlerMesh;
+let previewAnimFrame = null;
+let previewTime = 0;
+
+function initPreviewScene() {
+  const pCanvas = document.getElementById('preview-canvas');
+  if (!pCanvas) return;
+
+  previewScene = new THREE.Scene();
+  previewScene.background = null; // transparent
+
+  previewCamera = new THREE.PerspectiveCamera(45, pCanvas.clientWidth / pCanvas.clientHeight, 0.1, 50);
+  previewCamera.position.set(0, 4.5, 6.5);
+  previewCamera.lookAt(0, 1.6, 0);
+
+  previewRenderer = new THREE.WebGLRenderer({ canvas: pCanvas, antialias: true, alpha: true });
+  previewRenderer.setPixelRatio(window.devicePixelRatio);
+  previewRenderer.shadowMap.enabled = true;
+
+  // Lighting
+  const pAmb = new THREE.AmbientLight(0xffffff, 0.7);
+  previewScene.add(pAmb);
+
+  const pDir = new THREE.DirectionalLight(0xfffaed, 1.1);
+  pDir.position.set(5, 10, 8);
+  pDir.castShadow = true;
+  previewScene.add(pDir);
+
+  const pRim = new THREE.DirectionalLight(0xf97316, 0.5);
+  pRim.position.set(-5, 2, -4);
+  previewScene.add(pRim);
+
+  // Platform
+  const platGeo = new THREE.CylinderGeometry(2.0, 2.0, 0.22, 32);
+  const platMat = new THREE.MeshStandardMaterial({ color: 0xea580c, metalness: 0.3, roughness: 0.5 });
+  const platMesh = new THREE.Mesh(platGeo, platMat);
+  platMesh.position.y = -0.11;
+  platMesh.receiveShadow = true;
+  previewScene.add(platMesh);
+
+  // Platform ring glow
+  const ringGeo = new THREE.TorusGeometry(2.1, 0.08, 8, 48);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+  const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+  ringMesh.rotation.x = Math.PI / 2;
+  ringMesh.position.y = 0.0;
+  previewScene.add(ringMesh);
+
+  // Load initial brawler
+  loadPreviewBrawler(BRAWLER_KEYS[currentBrawlerIdx]);
+  animatePreview();
+}
+
+function loadPreviewBrawler(key) {
+  if (previewBrawlerMesh) previewScene.remove(previewBrawlerMesh);
+
+  const rig = create3DBrawlerMesh(key, 'blue');
+  previewBrawlerMesh = rig.root;
+
+  // Scale up 2.5x for showcase
+  previewBrawlerMesh.scale.set(2.5, 2.5, 2.5);
+  previewBrawlerMesh.position.set(0, 0, 0);
+
+  // Face the camera (front-facing)
+  rig.torsoGroup.rotation.y = 0;
+
+  previewScene.add(previewBrawlerMesh);
+
+  // Animate preview walk idle
+  previewBrawlerMesh.userData.rig = rig;
+
+  // Update UI stats panel
+  updateLobbyStats(key);
+}
+
+function animatePreview() {
+  previewAnimFrame = requestAnimationFrame(animatePreview);
+
+  previewTime += 0.016;
+
+  if (previewBrawlerMesh) {
+    // Slow breathing/idle rotation
+    previewBrawlerMesh.rotation.y = Math.sin(previewTime * 0.4) * 0.18;
+
+    // Idle bounce
+    previewBrawlerMesh.position.y = Math.sin(previewTime * 1.5) * 0.06;
+
+    // Leg idle sway
+    const rig = previewBrawlerMesh.userData.rig;
+    if (rig) {
+      rig.leftLegPivot.rotation.x  =  Math.sin(previewTime * 1.5) * 0.1;
+      rig.rightLegPivot.rotation.x = -Math.sin(previewTime * 1.5) * 0.1;
+    }
+  }
+
+  // Resize canvas to actual display size
+  const pCanvas = document.getElementById('preview-canvas');
+  if (pCanvas && previewRenderer) {
+    const w = pCanvas.clientWidth;
+    const h = pCanvas.clientHeight;
+    if (previewRenderer.domElement.width !== w || previewRenderer.domElement.height !== h) {
+      previewRenderer.setSize(w, h, false);
+      previewCamera.aspect = w / h;
+      previewCamera.updateProjectionMatrix();
+    }
+    previewRenderer.render(previewScene, previewCamera);
+  }
+}
+
+function updateLobbyStats(key) {
+  const s = LOBBY_STATS[key];
+  document.getElementById('stat-hp').style.width  = s.hp  + '%';
+  document.getElementById('stat-dmg').style.width = s.dmg + '%';
+  document.getElementById('stat-spd').style.width = s.spd + '%';
+  document.getElementById('stat-rng').style.width = s.rng + '%';
+  document.getElementById('role-tag').textContent = s.role;
+  document.getElementById('stage-brawler-name').textContent = BRAWLERS_3D[key].name;
+  document.getElementById('stage-cups').textContent = '🏆 ' + s.cups;
+  document.getElementById('stage-power').textContent = 'POWER ' + s.power;
+  document.getElementById('stage-level').textContent = s.power;
+}
+
+// Arrow Brawler Swipe
+function prevBrawler() {
+  currentBrawlerIdx = (currentBrawlerIdx - 1 + BRAWLER_KEYS.length) % BRAWLER_KEYS.length;
+  selectedBrawlerKey = BRAWLER_KEYS[currentBrawlerIdx];
+  loadPreviewBrawler(selectedBrawlerKey);
+  highlightDrawerCard('#brawler-drawer', selectedBrawlerKey, 'brawler');
+}
+
+function nextBrawler() {
+  currentBrawlerIdx = (currentBrawlerIdx + 1) % BRAWLER_KEYS.length;
+  selectedBrawlerKey = BRAWLER_KEYS[currentBrawlerIdx];
+  loadPreviewBrawler(selectedBrawlerKey);
+  highlightDrawerCard('#brawler-drawer', selectedBrawlerKey, 'brawler');
+}
+
+// Drawer open/close
+function openBrawlerSelect() {
+  document.getElementById('brawler-drawer').classList.remove('hidden');
+  document.getElementById('drawer-backdrop').classList.remove('hidden');
+}
+
+function closeBrawlerSelect() {
+  document.getElementById('brawler-drawer').classList.add('hidden');
+  document.getElementById('drawer-backdrop').classList.add('hidden');
+}
+
+function openMapSelect() {
+  document.getElementById('map-drawer').classList.remove('hidden');
+  document.getElementById('drawer-backdrop').classList.remove('hidden');
+}
+
+function closeMapSelect() {
+  document.getElementById('map-drawer').classList.add('hidden');
+  document.getElementById('drawer-backdrop').classList.add('hidden');
+}
+
+function closeAll() {
+  closeBrawlerSelect();
+  closeMapSelect();
+}
+
+function pickBrawler(key, el) {
+  selectedBrawlerKey = key;
+  currentBrawlerIdx = BRAWLER_KEYS.indexOf(key);
+  loadPreviewBrawler(key);
+  highlightDrawerCard('#brawler-drawer', key, 'brawler');
+  setTimeout(closeBrawlerSelect, 300);
+}
+
+function pickMap(mapKey, name, label, el) {
+  selectedMapKey = mapKey;
+  document.getElementById('event-map-name').textContent = label;
+  highlightDrawerCard('#map-drawer', mapKey, 'map');
+  setTimeout(closeMapSelect, 300);
+}
+
+function highlightDrawerCard(drawerId, key, type) {
+  const attr = type === 'brawler' ? 'data-brawler' : 'data-map';
+  document.querySelectorAll(`${drawerId} .drawer-card`).forEach(c => {
+    c.classList.toggle('selected', c.getAttribute(attr) === key);
+  });
+}
+
+function selectMapDot(idx, mapKey) {
+  selectedMapKey = mapKey;
+  document.querySelectorAll('.map-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === idx);
+  });
+  const labels = {
+    crystalCavern: 'Crystal Cavern · Divisione cellulare',
+    desertDunes: 'Desert Dunes · Open Field',
+    snakePrairie: 'Snake Prairie · Dense Bush'
+  };
+  document.getElementById('event-map-name').textContent = labels[mapKey];
+}
+
+// Initialize preview after DOM is ready
 initThreeScene();
 init3DAimIndicator();
+initPreviewScene();
 
 function animate(currentTime) {
   requestAnimationFrame(animate);
